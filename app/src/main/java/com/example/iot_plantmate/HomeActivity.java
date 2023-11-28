@@ -50,5 +50,14 @@ public class HomeActivity extends AppCompatActivity {
             }
         });
 
+        /*Logica card Perfil*/
+        CardView Perfil = findViewById(R.id.Perfil);
+        Perfil.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(HomeActivity.this,PerfilActivity.class));
+            }
+        });
+
     }
 }
