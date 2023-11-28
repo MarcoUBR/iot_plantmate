@@ -31,6 +31,7 @@ public class LoginActivity extends AppCompatActivity {
         edPassword = findViewById(R.id.editTextTextLoginPassword);
         btn = findViewById(R.id.buttonLogin);
         tv = findViewById(R.id.textViewNewUser);
+        FirebaseAuth mAuth = FirebaseAuth.getInstance();
 
         btn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -41,6 +42,7 @@ public class LoginActivity extends AppCompatActivity {
                     Toast.makeText(getApplicationContext(), "Datos faltantes, ingresa todos los datos....", Toast.LENGTH_SHORT).show();
                 } else {
                     Toast.makeText(getApplicationContext(), "Login Success", Toast.LENGTH_SHORT).show();
+                    signInWithFirebase(useremail, password);
                 }
             }
         });
@@ -51,5 +53,28 @@ public class LoginActivity extends AppCompatActivity {
             }
         });
 
+    }
+    // Método personalizado para iniciar sesión con Firebase
+    private void signInWithFirebase(String email, String password) {
+        FirebaseAuth mAuth = FirebaseAuth.getInstance();
+
+        mAuth.signInWithEmailAndPassword(email, password)
+                .addOnCompleteListener(this, new OnCompleteListener<AuthResult>() {
+                    @Override
+                    public void onComplete(@NonNull Task<AuthResult> task) {
+                        if (task.isSuccessful()) {
+                            // El inicio de sesión fue exitoso, realiza las acciones necesarias
+                            Intent intent = new Intent(LoginActivity.this, HomeActivity.class);
+                            startActivity(intent);
+                            finish(); // Opcional: Puedes finalizar la LoginActivity si no quieres que el usuario vuelva atrás
+                            Toast.makeText(getApplicationContext(), "Login Success", Toast.LENGTH_SHORT).show();
+
+                            // Aquí puedes redirigir a otra actividad o realizar otras acciones después del inicio de sesión
+                        } else {
+                            // El inicio de sesión falló, muestra un mensaje de error
+                            Toast.makeText(getApplicationContext(), "Error en el inicio de sesión", Toast.LENGTH_SHORT).show();
+                        }
+                    }
+                });
     }
 }
