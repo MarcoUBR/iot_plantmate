@@ -59,5 +59,14 @@ public class HomeActivity extends AppCompatActivity {
             }
         });
 
+        /*Logica card Sensores*/
+        CardView Sensores = findViewById(R.id.Sensores);
+        Sensores.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startActivity(new Intent(HomeActivity.this,SensoresActivity.class));
+            }
+        });
+
     }
 }

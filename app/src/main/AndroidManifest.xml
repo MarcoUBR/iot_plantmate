@@ -12,6 +12,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Iot_plantmate"
         tools:targetApi="31">
+        <meta-data
+            android:name="com.google.android.actions"
+            android:resource="@xml/list_group" />
+        <activity
+            android:name=".SensoresActivity"
+            android:exported="false" />
         <activity
             android:name=".PerfilActivity"
             android:exported="false" />
