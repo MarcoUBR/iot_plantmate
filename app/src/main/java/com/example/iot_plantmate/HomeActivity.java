@@ -8,6 +8,8 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
 
+import com.google.firebase.auth.FirebaseAuth;
+
 public class HomeActivity extends AppCompatActivity {
 
     @Override
@@ -19,7 +21,12 @@ public class HomeActivity extends AppCompatActivity {
         exit.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                startActivity(new Intent(HomeActivity.this, LoginActivity.class));
+                FirebaseAuth.getInstance().signOut();
+                // Después de cerrar sesión, inicia LoginActivity
+                Intent intent = new Intent(HomeActivity.this, LoginActivity.class);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK | Intent.FLAG_ACTIVITY_NEW_TASK); // Limpiar la pila de actividades
+                startActivity(intent);
+                //startActivity(new Intent(HomeActivity.this, LoginActivity.class));
             }
         });
 
@@ -28,6 +35,7 @@ public class HomeActivity extends AppCompatActivity {
         nuevo.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+
                 startActivity(new Intent(HomeActivity.this,NuevoCultivoActivity.class));
             }
         });
