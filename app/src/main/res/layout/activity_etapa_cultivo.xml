@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/azul"
-    tools:context=".EtapaCultivo">
+    >
 
 
     <ImageView
@@ -155,6 +155,24 @@
                 android:background="@color/colorWhite"
                 android:textColor="@color/black"
                 android:textStyle="bold"/>
+            <ImageView
+                android:id="@+id/imageViewSelected"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/buttonUploadImage"
+                android:layout_marginTop="10dp"
+                android:scaleType="centerCrop" />
+
+            <Button
+                android:id="@+id/buttonUploadImage"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_below="@+id/btnRegistrarEtapa"
+                android:layout_marginTop="12dp"
+                android:background="@color/blue"
+                android:text="Subir Imagen"
+                android:textColor="#FFFFFF"
+                android:textSize="18dp" />
 
             <Button
                 android:id="@+id/btnRegistrarEtapa"

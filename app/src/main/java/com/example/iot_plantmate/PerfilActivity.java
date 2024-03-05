@@ -13,7 +13,7 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.database.ValueEventListener;
 
 public class PerfilActivity extends AppCompatActivity {
-   // private TextView nombreTextView, emailTextView;
+
 
     private TextView nombreTextView, emailTextView;
 

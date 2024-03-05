@@ -11,14 +11,25 @@ import android.view.View;
 import android.widget.Button;
 import android.widget.DatePicker;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.provider.MediaStore;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.auth.FirebaseUser;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.storage.FirebaseStorage;
+import com.google.firebase.storage.StorageReference;
+import com.google.firebase.storage.UploadTask;
 
+import java.io.ByteArrayOutputStream;
 import java.util.Calendar;
 
 public class EtapaCultivo extends AppCompatActivity {
@@ -28,15 +39,21 @@ public class EtapaCultivo extends AppCompatActivity {
             editTextHorasCalor, editTextTierraEtapa, editTextUbicacionEtapa,
             editTextSubstratoEtapa;
 
+    private static final int REQUEST_IMAGE_CAPTURE = 1;
+    private ImageView imageViewSelected;
     private FirebaseAuth firebaseAuth;
     private String userId;
     private String idEtapa;  // Nueva variable para almacenar el ID de la etapa
+
+    private StorageReference storageReference;
+    private DatabaseReference databaseReference;
 
     @SuppressLint("MissingInflatedId")
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_etapa_cultivo);
+        imageViewSelected = findViewById(R.id.imageViewSelected);
 
         textViewFechaEtapa = findViewById(R.id.textViewFechaEtapa);
         editTextNombreEtapa = findViewById(R.id.editTextNombreEtapa);
@@ -49,6 +66,10 @@ public class EtapaCultivo extends AppCompatActivity {
 
         // Inicializar Firebase Auth
         firebaseAuth = FirebaseAuth.getInstance();
+        // Inicializar Firebase Storage
+        storageReference = FirebaseStorage.getInstance().getReference();
+        // Inicializar la referencia a la base de datos
+        databaseReference = FirebaseDatabase.getInstance().getReference();
 
         // Obtener el ID del usuario actual
         FirebaseUser user = firebaseAuth.getCurrentUser();
@@ -58,13 +79,17 @@ public class EtapaCultivo extends AppCompatActivity {
 
         // Configurar el OnClickListener para el botón de registro
         Button btnRegistrarEtapa = findViewById(R.id.btnRegistrarEtapa);
-        btnRegistrarEtapa.setOnClickListener(new View.OnClickListener() {
+        btnRegistrarEtapa.setOnClickListener(v -> registrarEtapa());
+        // Configurar el OnClickListener para el botón de subir imagen
+        Button buttonUploadImage = findViewById(R.id.buttonUploadImage);
+        buttonUploadImage.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                registrarEtapa();
+                dispatchTakePictureIntent();
             }
         });
     }
+
 
     public void mostrarDatePicker(View view) {
         Calendar calendario = Calendar.getInstance();
@@ -89,6 +114,23 @@ public class EtapaCultivo extends AppCompatActivity {
         datePickerDialog.show();
     }
 
+    private final ActivityResultLauncher<Intent> takePictureLauncher = registerForActivityResult(
+            new ActivityResultContracts.StartActivityForResult(),
+            result -> {
+                if (result.getResultCode() == RESULT_OK) {
+                    Bundle extras = result.getData().getExtras();
+                    if (extras != null) {
+                        Bitmap imageBitmap = (Bitmap) extras.get("data");
+                        imageViewSelected.setImageBitmap(imageBitmap);
+                    }
+                }
+            });
+
+    private void dispatchTakePictureIntent() {
+        Intent takePictureIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+        takePictureLauncher.launch(takePictureIntent);
+    }
+
     private void registrarEtapa() {
         // Obtén los valores de las vistas
         String nombreEtapa = editTextNombreEtapa.getText().toString().trim();
@@ -98,6 +140,7 @@ public class EtapaCultivo extends AppCompatActivity {
         String tierra = editTextTierraEtapa.getText().toString().trim();
         String ubicacion = editTextUbicacionEtapa.getText().toString().trim();
         String substrato = editTextSubstratoEtapa.getText().toString().trim();
+
         String fecha = textViewFechaEtapa.getText().toString().trim();
 
         // Verifica si los campos están vacíos
@@ -111,18 +154,14 @@ public class EtapaCultivo extends AppCompatActivity {
             Etapa etapa = new Etapa(nombreEtapa, observaciones, medidas, horasCalor,
                     tierra, ubicacion, substrato, fecha);
 
-            // Obtén una referencia a la base de datos de Firebase
-            DatabaseReference databaseReference = FirebaseDatabase.getInstance().getReference()
-                    .child("users").child(userId).child("etapas");
-
             // Genera un nuevo ID para la etapa
-            idEtapa = databaseReference.push().getKey();
+            idEtapa = databaseReference.child("users").child(userId).child("etapas").push().getKey();
 
             // Asigna el ID al objeto Etapa
             etapa.setId(idEtapa);
 
-            // Guarda la etapa en la base de datos usando el ID generado
-            databaseReference.child(idEtapa).setValue(etapa);
+            // Subir la imagen a Firebase Storage
+            uploadImageToFirebaseStorage(idEtapa, userId, etapa);
 
             // Muestra un mensaje de éxito
             Toast.makeText(this, "Etapa registrada con éxito", Toast.LENGTH_SHORT).show();
@@ -130,6 +169,7 @@ public class EtapaCultivo extends AppCompatActivity {
             limpiarCampos();
         }
     }
+
     // Método para limpiar los campos del formulario
     private void limpiarCampos() {
         editTextNombreEtapa.setText("");
@@ -142,11 +182,46 @@ public class EtapaCultivo extends AppCompatActivity {
         textViewFechaEtapa.setText("Fecha: No Seleccionada");
     }
 
+    private void uploadImageToFirebaseStorage(String etapaId, String userId, Etapa etapa) {
+        // Obtener la referencia al Storage con el nombre de la imagen
+        StorageReference imageRef = storageReference.child("etapas_images/" + userId + "/" + etapaId + ".jpg");
+
+        // Obtener el bitmap de la imagen desde el ImageView
+        imageViewSelected.setDrawingCacheEnabled(true);
+        imageViewSelected.buildDrawingCache();
+        Bitmap bitmap = imageViewSelected.getDrawingCache();
+
+        // Convertir el bitmap a bytes
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 100, baos);
+        byte[] imageData = baos.toByteArray();
+
+        // Subir la imagen al Storage
+        UploadTask uploadTask = imageRef.putBytes(imageData);
+        uploadTask.addOnSuccessListener(taskSnapshot -> {
+            // Imagen subida con éxito
+            // Obtener la URL de la imagen subida
+            imageRef.getDownloadUrl().addOnSuccessListener(uri -> {
+                String imageUrl = uri.toString();
+                // Guardar la URL de la imagen en la base de datos
+                etapa.setImageUrl(imageUrl);
+                databaseReference.child("users").child(userId).child("etapas").child(etapaId).setValue(etapa);
+            });
+
+            // Reiniciar el campo de la imagen
+            imageViewSelected.setImageBitmap(null);
+        }).addOnFailureListener(e -> {
+            // Error al subir la imagen
+            Toast.makeText(this, "Error al subir la imagen", Toast.LENGTH_SHORT).show();
+        });
+    }
+
     // Clase interna para el modelo Etapa
     private static class Etapa {
         public String id;
         public String nombreEtapa, observaciones, medidas, horasCalor, tierra,
                 ubicacion, substrato, fecha;
+        public String imageUrl; // Nuevo campo para almacenar la URL de la imagen
 
         public Etapa() {
             // Constructor vacío necesario para Firebase
@@ -166,6 +241,10 @@ public class EtapaCultivo extends AppCompatActivity {
 
         public void setId(String id) {
             this.id = id;
+        }
+
+        public void setImageUrl(String imageUrl) {
+            this.imageUrl = imageUrl;
         }
     }
 }
